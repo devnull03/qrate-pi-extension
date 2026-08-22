@@ -1,0 +1,27 @@
+{
+  "name": "@devnull03/qrate-pi-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pi tools, guardrails, skill, and system prompt for qrate",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "0.84.2",
+    "@earendil-works/pi-coding-agent": "0.84.2",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.0.0"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/qrate.ts"
+    ],
+    "skills": [
+      "./skills"
+    ]
+  }
+}
