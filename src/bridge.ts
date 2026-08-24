@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-export const BRIDGE_PROTOCOL = 1;
+export const BRIDGE_PROTOCOL = 2;
 
 interface Endpoint {
   url: string;
@@ -46,6 +46,18 @@ async function endpoint(): Promise<Endpoint> {
   return parsed as Endpoint;
 }
 
+function responseError(result: unknown, status: number): string {
+  if (typeof result !== "object" || result === null || !("error" in result)) {
+    return `HTTP ${status}`;
+  }
+  const error = result.error;
+  if (typeof error === "string") return error;
+  if (typeof error !== "object" || error === null) return `HTTP ${status}`;
+  const code = "code" in error && typeof error.code === "string" ? error.code : `HTTP ${status}`;
+  const detail = "detail" in error && typeof error.detail === "string" ? error.detail : undefined;
+  return detail ? `${code}: ${detail}` : code;
+}
+
 export async function callBridge(
   method: string,
   params: Record<string, unknown> | undefined,
@@ -76,10 +88,7 @@ export async function callBridge(
     throw new BridgeError(`qrate returned an unreadable response (${response.status})`);
   }
   if (!response.ok) {
-    const reason =
-      typeof result === "object" && result !== null && "error" in result
-        ? String(result.error)
-        : `HTTP ${response.status}`;
+    const reason = responseError(result, response.status);
     throw new BridgeError(`qrate refused the request: ${reason}`);
   }
   return result;
