@@ -1,7 +1,7 @@
 import { Type } from "@earendil-works/pi-ai";
 import type { TObject } from "typebox";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { callBridge } from "../src/bridge.js";
+import { callQrate } from "../src/cli.js";
 import { installPermissionGate } from "../src/permissions.js";
 
 const severity = Type.Union([Type.Literal("error"), Type.Literal("warning"), Type.Literal("note")]);
@@ -59,7 +59,7 @@ function tool(
     description,
     parameters,
     async execute(_id, params, signal) {
-      const result = await callBridge(method, Object.keys(params).length ? params : undefined, signal);
+      const result = await callQrate(method, Object.keys(params).length ? params : undefined, signal);
       if (method === "thumbnails" && typeof result === "object" && result !== null && "items" in result) {
         const items = Array.isArray(result.items) ? result.items : [];
         const images = items.flatMap((item) => {

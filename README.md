@@ -1,7 +1,7 @@
 # qrate Pi extension
 
 This package makes [Pi](https://github.com/earendil-works/pi) the embedded agent inside
-[qrate](https://github.com/devnull03/qrate). It supplies typed protocol 2 tools, the embedded
+[qrate](https://github.com/devnull03/qrate). It supplies typed qrate tools, the embedded
 assistant's system prompt, confirmation gates around Pi's coding tools, and a separate
 `qrate-live-review` skill for external Pi installations.
 
@@ -18,5 +18,8 @@ npm run check
 npm test
 ```
 
-The runtime contract is `bridge_protocol: 2`. Breaking bridge changes require a protocol bump in
-both repositories and a new extension release.
+The runtime contract is qrate's `qrate agent` command. qrate starts Pi with `QRATE_CLI` (the
+`qrate-cli` shipped beside the app) and `QRATE_AGENT=pi`; each tool runs
+`$QRATE_CLI agent <command>` with its parameters as JSON on stdin. Exit `1` is a refusal with JSON
+on stdout, and any other failure reports the CLI's stderr. A change to that command's contract
+needs a new extension release and a new pin in qrate's `scripts/fetch-agent-runtime.*`.

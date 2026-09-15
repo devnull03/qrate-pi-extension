@@ -1,6 +1,5 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { EventEmitter } from "node:events";
+import { PassThrough, Writable } from "node:stream";
 import type { TSchema } from "@earendil-works/pi-ai";
 import type {
   ExtensionAPI,
@@ -8,15 +7,18 @@ import type {
   ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { afterEach, expect, it, vi } from "vitest";
+
+const spawn = vi.hoisted(() => vi.fn());
+vi.mock("node:child_process", () => ({ spawn }));
+
 import qrateExtension from "../extensions/qrate.js";
-import { BRIDGE_PROTOCOL } from "../src/bridge.js";
 
 afterEach(() => {
-  vi.unstubAllGlobals();
-  delete process.env.QRATE_AGENT_ENDPOINT;
+  spawn.mockReset();
+  delete process.env.QRATE_CLI;
 });
 
-it("registers only protocol two tools and sends an overview request", async () => {
+it("registers the qrate tools and runs an overview through the CLI", async () => {
   const tools: ToolDefinition<TSchema, unknown, unknown>[] = [];
   qrateExtension({
     on: vi.fn(),
@@ -34,21 +36,27 @@ it("registers only protocol two tools and sends an overview request", async () =
     "qrate_stage_findings",
   ]);
 
-  const dir = await mkdtemp(join(tmpdir(), "qrate-pi-tools-"));
-  const endpoint = join(dir, "agent-bridge.json");
-  process.env.QRATE_AGENT_ENDPOINT = endpoint;
-  await writeFile(
-    endpoint,
-    JSON.stringify({ url: "http://127.0.0.1:1", token: "secret", bridge_protocol: BRIDGE_PROTOCOL }),
-  );
-  const fetch = vi.fn(async (_url: string, _init: RequestInit) =>
-    new Response(JSON.stringify({ revision: 7, result: "overview", project: { name: "Test" } }), { status: 200 }),
-  );
-  vi.stubGlobal("fetch", fetch);
+  process.env.QRATE_CLI = "qrate-cli";
+  const stdout = new PassThrough();
+  const stderr = new PassThrough();
+  const child = Object.assign(new EventEmitter(), {
+    stdout,
+    stderr,
+    stdin: new Writable({
+      write: (_chunk, _encoding, done) => done(),
+      final(done) {
+        done();
+        stdout.on("end", () => child.emit("close", 0));
+        stdout.end(JSON.stringify({ revision: 7, project: { name: "Test" } }));
+        stderr.end();
+      },
+    }),
+  });
+  spawn.mockReturnValue(child);
 
   const overview = tools.find((tool) => tool.name === "qrate_overview");
-  expect(overview).toBeDefined();
-  await overview?.execute("call-1", {}, undefined, undefined, {} as ExtensionContext);
+  const result = await overview?.execute("call-1", {}, undefined, undefined, {} as ExtensionContext);
 
-  expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body))).toEqual({ method: "overview" });
+  expect(spawn.mock.calls[0]?.[1]).toEqual(["agent", "overview"]);
+  expect(result?.details).toEqual({ revision: 7, project: { name: "Test" } });
 });
