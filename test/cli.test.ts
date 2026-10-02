@@ -47,9 +47,27 @@ describe("qrate CLI client", () => {
     expect(JSON.parse(child.input)).toEqual({ revision: 3, findings: [] });
   });
 
-  it("refuses to run without qrate's CLI path", async () => {
-    await expect(callQrate("overview", undefined)).rejects.toThrow(QrateError);
-    expect(spawn).not.toHaveBeenCalled();
+  it("finds qrate on PATH and names itself when qrate did not start it", async () => {
+    delete process.env.QRATE_AGENT;
+    spawn.mockReturnValue(fakeCli(0, "{}"));
+    await callQrate("overview", undefined);
+    expect(spawn.mock.calls[0]?.[0]).toBe("qrate");
+    expect(spawn.mock.calls[0]?.[2].env.QRATE_AGENT).toBe("pi");
+
+    process.env.QRATE_AGENT = "pi/review-2";
+    spawn.mockReturnValue(fakeCli(0, "{}"));
+    await callQrate("overview", undefined);
+    expect(spawn.mock.calls[1]?.[2].env.QRATE_AGENT).toBe("pi/review-2");
+    delete process.env.QRATE_AGENT;
+  });
+
+  it("says how to fix a command that is not installed", async () => {
+    const child = fakeCli(0, "");
+    spawn.mockReturnValue(child);
+    const call = callQrate("overview", undefined);
+    child.emit("error", new Error("spawn qrate ENOENT"));
+    await expect(call).rejects.toThrow(QrateError);
+    await expect(call).rejects.toThrow("put its command on PATH");
   });
 
   it("reports qrate's structured refusal code", async () => {
