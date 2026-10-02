@@ -18,16 +18,21 @@ function refusal(stdout: string): string {
   return detail ? `${code}: ${detail}` : code;
 }
 
-/** Runs `$QRATE_CLI agent <method>` with the params on stdin. qrate sets QRATE_CLI and QRATE_AGENT. */
+/**
+ * Runs `qrate agent <method>` with the params on stdin. qrate sets QRATE_CLI and QRATE_AGENT for
+ * its own Pi; a Pi you installed yourself finds `qrate` on PATH and is named `pi`.
+ */
 export async function callQrate(
   method: string,
   params: Record<string, unknown> | undefined,
   signal?: AbortSignal,
 ): Promise<unknown> {
-  const cli = process.env.QRATE_CLI;
-  if (!cli) throw new QrateError("qrate did not provide its CLI path");
-
-  const child = spawn(cli, ["agent", method.replaceAll("_", "-")], { signal, windowsHide: true });
+  const cli = process.env.QRATE_CLI || "qrate";
+  const child = spawn(cli, ["agent", method.replaceAll("_", "-")], {
+    signal,
+    windowsHide: true,
+    env: { ...process.env, QRATE_AGENT: process.env.QRATE_AGENT || "pi" },
+  });
   let stdout = "";
   let stderr = "";
   child.stdout.setEncoding("utf8").on("data", (chunk: string) => (stdout += chunk));
@@ -36,7 +41,9 @@ export async function callQrate(
   child.stdin.end(JSON.stringify(params ?? {}));
 
   const code = await new Promise<number | null>((resolve, reject) => {
-    child.on("error", (error) => reject(new QrateError(`qrate's CLI could not run: ${String(error)}`)));
+    child.on("error", (error) =>
+      reject(new QrateError(`could not run \`${cli}\`; install qrate and put its command on PATH: ${String(error)}`)),
+    );
     child.on("close", resolve);
   });
   if (code === 1) throw new QrateError(`qrate refused the request: ${refusal(stdout)}`);
