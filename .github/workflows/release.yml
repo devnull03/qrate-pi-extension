@@ -1,0 +1,37 @@
+name: Release
+
+# Push a tag like `v1.2.3` to publish the tarball qrate pins in `scripts/fetch-agent-runtime.*`.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Verify the tag matches package.json
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          packaged="$(node -p "require('./package.json').version")"
+          if [ "$version" != "$packaged" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $packaged"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - name: Package
+        run: git archive --format=tar.gz --prefix="qrate-pi-extension-$VERSION/" -o "qrate-pi-extension-$VERSION.tar.gz" HEAD
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "qrate-pi-extension-$VERSION.tar.gz" --title "$GITHUB_REF_NAME" --generate-notes
