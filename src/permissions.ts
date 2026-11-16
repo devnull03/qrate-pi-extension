@@ -16,6 +16,21 @@ export function outsideProject(path: string, root = projectRoot()): boolean {
   return rel === ".." || rel.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) || isAbsolute(rel);
 }
 
+const RENAMERS = new Set(["mv", "rename", "move-item", "rename-item", "ren", "move"]);
+export const RENAME_REASON =
+  "Renaming files in the project goes through qrate_stage_renames, so qrate can update the rows that link them and undo it. Stage the renames instead.";
+
+/** Whether a shell command would rename or move something inside the project. */
+export function renamesInProject(command: string, root = projectRoot()): boolean {
+  return command.split(/[;&|\n]+/).some((segment) => {
+    const words = segment.trim().split(/\s+/).filter(Boolean);
+    if (words[0] === "sudo") words.shift();
+    if (!RENAMERS.has((words[0] ?? "").toLowerCase())) return false;
+    const paths = words.slice(1).filter((word) => !word.startsWith("-"));
+    return paths.length === 0 || paths.some((path) => !outsideProject(path.replace(/^["']|["']$/g, ""), root));
+  });
+}
+
 function pathFrom(input: Record<string, unknown>): string | undefined {
   for (const key of ["path", "file_path", "directory"]) {
     if (typeof input[key] === "string") return input[key];
@@ -30,6 +45,9 @@ export function installPermissionGate(pi: ExtensionAPI): void {
       let title: string | undefined;
       let detail: string | undefined;
 
+      if (event.toolName === "bash" && renamesInProject(String(input.command ?? ""))) {
+        return { block: true, reason: RENAME_REASON };
+      }
       if (event.toolName === "bash") {
         title = "Allow shell command?";
         detail = `${String(input.command ?? "")}`;

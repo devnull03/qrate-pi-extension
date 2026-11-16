@@ -166,4 +166,45 @@ export default function qrateExtension(pi: ExtensionAPI): void {
       }),
     ),
   );
+  pi.registerTool(
+    tool(
+      "qrate_stage_column_rewrite",
+      "stage qrate column rewrite",
+      "Stage new whole-cell values for one column as a single draft the archivist previews and applies in one step. Use this for every bulk edit of a column; never stage it cell by cell as findings. Replaces your earlier rewrite of the same column and never changes a cell.",
+      "stage_column_rewrite",
+      Type.Object({
+        revision: Type.Integer({ minimum: 0 }),
+        column: Type.String({ minLength: 1 }),
+        values: Type.Array(
+          Type.Tuple([
+            Type.Integer({ minimum: 0, description: "Source-row index returned by qrate" }),
+            Type.String({ maxLength: 65536, description: "Whole new cell text" }),
+          ]),
+          { maxItems: 50000 },
+        ),
+        note: Type.Optional(
+          Type.String({ maxLength: 512, description: "Shown once beside the draft, e.g. where the values came from" }),
+        ),
+      }),
+    ),
+  );
+  pi.registerTool(
+    tool(
+      "qrate_stage_renames",
+      "stage qrate file renames",
+      "Stage renames of files the rows link to, as one draft the archivist applies in one undoable step. Paths are relative to the project folder and must stay inside it. This is the only way to rename project files; it replaces your earlier staged renames and renames nothing itself.",
+      "stage_renames",
+      Type.Object({
+        revision: Type.Integer({ minimum: 0 }),
+        renames: Type.Array(
+          Type.Object({
+            row: Type.Integer({ minimum: 0, description: "Source-row index of the row linking the file" }),
+            from: Type.String({ minLength: 1, description: "Current path, relative to the project folder" }),
+            to: Type.String({ minLength: 1, description: "New path, relative to the project folder" }),
+          }),
+          { maxItems: 50000 },
+        ),
+      }),
+    ),
+  );
 }

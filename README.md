@@ -7,8 +7,10 @@ assistant's system prompt, confirmation gates around Pi's coding tools, and a se
 
 qrate bundles and loads a pinned release explicitly with skills disabled; its built-in assistant
 uses `SYSTEM.md`, not the external-agent skill. The extension is not a qrate Luau plugin and does
-not write archive cells: `qrate_stage_findings` only publishes drafts that the archivist may accept
-from qrate's existing Problems panel and Fixes menu.
+not write archive cells or rename files: `qrate_stage_findings`, `qrate_stage_column_rewrite` and
+`qrate_stage_renames` only publish drafts that the archivist may accept from qrate's existing
+Problems panel and Fixes menu. A shell `mv`, `rename`, `ren` or `Move-Item` aimed inside the project
+is refused outright and pointed at `qrate_stage_renames`.
 
 ## Development
 
