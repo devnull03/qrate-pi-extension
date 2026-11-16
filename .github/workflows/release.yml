@@ -1,9 +1,11 @@
 name: Release
 
-# Push a tag like `v1.2.3` to publish the tarball qrate pins in `scripts/fetch-agent-runtime.*`.
+# Publishes the tarball qrate pins in `scripts/fetch-agent-runtime.*`. Push a tag like `v1.2.3`,
+# or run this by hand on a branch to tag and release the version in its package.json.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,8 +21,9 @@ jobs:
           cache: npm
       - name: Verify the tag matches package.json
         run: |
-          version="${GITHUB_REF_NAME#v}"
           packaged="$(node -p "require('./package.json').version")"
+          version="$packaged"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then version="${GITHUB_REF_NAME#v}"; fi
           if [ "$version" != "$packaged" ]; then
             echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $packaged"
             exit 1
@@ -34,4 +37,4 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "qrate-pi-extension-$VERSION.tar.gz" --title "$GITHUB_REF_NAME" --generate-notes
+        run: gh release create "v$VERSION" "qrate-pi-extension-$VERSION.tar.gz" --target "$GITHUB_SHA" --title "v$VERSION" --generate-notes
