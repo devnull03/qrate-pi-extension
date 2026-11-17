@@ -1,4 +1,5 @@
 import { isAbsolute, relative, resolve } from "node:path";
+import { callQrate } from "./cli.js";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const MUTATIONS = new Set(["edit", "write"]);
@@ -39,6 +40,7 @@ function pathFrom(input: Record<string, unknown>): string | undefined {
 }
 
 export function installPermissionGate(pi: ExtensionAPI): void {
+  const denied = new Set<string>();
   pi.on("tool_call", async (event, ctx) => {
     try {
       const input = event.input as Record<string, unknown>;
@@ -56,10 +58,21 @@ export function installPermissionGate(pi: ExtensionAPI): void {
         title = `Allow ${event.toolName}?`;
         detail = resolve(projectRoot() ?? process.cwd(), path);
       } else if (FILE_READS.has(event.toolName)) {
-        const path = pathFrom(input);
-        if (path && outsideProject(path)) {
-          title = "Allow reading outside the project?";
-          detail = resolve(projectRoot() ?? process.cwd(), path);
+        const path = resolve(projectRoot() ?? process.cwd(), pathFrom(input) ?? ".");
+        try {
+          // Check with qrate every time so revocation and canonical symlink checks stay effective.
+          await callQrate("check_access", { path });
+          return undefined;
+        } catch {
+          if (denied.has(path)) return { block: true, reason: "Read access was declined. Do not ask again without a new user instruction." };
+          if (!ctx.hasUI) return { block: true, reason: "Read access requires the archivist's approval in qrate." };
+          try {
+            await callQrate("request_access", { path, reason: `Read this path with Pi's ${event.toolName} tool for the archivist's request.` });
+            return undefined;
+          } catch (error) {
+            denied.add(path);
+            return { block: true, reason: `qrate did not grant read access: ${String(error)}` };
+          }
         }
       }
 

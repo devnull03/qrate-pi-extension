@@ -263,4 +263,20 @@ export default function qrateExtension(pi: ExtensionAPI): void {
       }),
     ),
   );
+  pi.registerTool(tool(
+    "qrate_request_file_access", "request read access",
+    "Ask the archivist in qrate to approve read-only access to a named file or folder until qrate closes. Do not repeat a declined request without a new user instruction.",
+    "request_access", Type.Object({ path: Type.String({ minLength: 1, maxLength: 4096 }), reason: Type.String({ minLength: 1, maxLength: 512 }) }),
+  ));
+  pi.registerTool(tool(
+    "qrate_forget_file_access", "revoke read access",
+    "Revoke this agent's explicit read grants for the current project.",
+    "forget_access", Type.Object({}),
+  ));
+  pi.registerTool(tool(
+    "qrate_import_files", "attach files as rows",
+    "Attach approved files or folders as new linked rows using qrate's file import and duplicate detection. Existing components are skipped; originals are linked in place. One undo reverses the import. Obtain read access first and use the current overview revision.",
+    "import_files", Type.Object({ revision: Type.Integer({ minimum: 0 }), paths: Type.Array(Type.String({ minLength: 1, maxLength: 4096 }), { minItems: 1, maxItems: 1000 }), recursive: Type.Optional(Type.Boolean()) }),
+  ));
+
 }

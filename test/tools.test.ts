@@ -38,6 +38,9 @@ it("registers the qrate tools and runs an overview through the CLI", async () =>
     "qrate_stage_renames",
     "qrate_edit_table",
     "qrate_delete",
+    "qrate_request_file_access",
+    "qrate_forget_file_access",
+    "qrate_import_files",
   ]);
 
   process.env.QRATE_CLI = "qrate-cli";
