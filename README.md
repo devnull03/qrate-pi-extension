@@ -10,7 +10,9 @@ uses `SYSTEM.md`, not the external-agent skill. The extension is not a qrate Lua
 not write archive cells or rename files: `qrate_stage_findings`, `qrate_stage_column_rewrite` and
 `qrate_stage_renames` only publish drafts that the archivist may accept from qrate's existing
 Problems panel and Fixes menu. A shell `mv`, `rename`, `ren` or `Move-Item` aimed inside the project
-is refused outright and pointed at `qrate_stage_renames`.
+is refused outright and pointed at `qrate_stage_renames`. `qrate_edit_table` changes the table's
+shape (rows, columns, arrangement, filters) as undoable steps, and `qrate_delete` only asks the
+archivist, who confirms or declines in a qrate dialog.
 
 ## Development
 

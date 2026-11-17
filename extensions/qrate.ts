@@ -207,4 +207,60 @@ export default function qrateExtension(pi: ExtensionAPI): void {
       }),
     ),
   );
+  pi.registerTool(
+    tool(
+      "qrate_edit_table",
+      "edit the qrate table",
+      "Change the table's shape at once, as one undo step credited to you: add_rows, add_column, rename_column, move_column, describe_column, move_row, indent_row, outdent_row, duplicate_row, or filter. Never use it to change existing cell values; stage those with qrate_stage_column_rewrite or qrate_stage_findings.",
+      "edit",
+      Type.Object({
+        revision: Type.Integer({ minimum: 0 }),
+        op: Type.Union([
+          Type.Literal("add_rows"),
+          Type.Literal("add_column"),
+          Type.Literal("rename_column"),
+          Type.Literal("move_column"),
+          Type.Literal("describe_column"),
+          Type.Literal("move_row"),
+          Type.Literal("indent_row"),
+          Type.Literal("outdent_row"),
+          Type.Literal("duplicate_row"),
+          Type.Literal("filter"),
+        ]),
+        rows: Type.Optional(
+          Type.Array(Type.Record(Type.String(), Type.String()), {
+            maxItems: 1000,
+            description: "add_rows: each new row as column name to value",
+          }),
+        ),
+        column: Type.Optional(Type.String({ description: "The column the operation acts on" })),
+        name: Type.Optional(Type.String({ description: "add_column, rename_column: the new name" })),
+        after: Type.Optional(
+          Type.String({ description: "add_column, move_column: the column to place it after; omit for first" }),
+        ),
+        data_type: Type.Optional(Type.String({ description: "describe_column: Title, Text, Date, Filename, Number, Url, Identifier, …" })),
+        description: Type.Optional(Type.String({ description: "describe_column: what the column holds" })),
+        row: Type.Optional(Type.Integer({ minimum: 0, description: "Source-row index" })),
+        target: Type.Optional(Type.Integer({ minimum: 0, description: "move_row: the row to place it beside or under" })),
+        placement: Type.Optional(Type.Union([Type.Literal("before"), Type.Literal("after"), Type.Literal("child")])),
+        keep: Type.Optional(
+          Type.Array(Type.String(), { description: "filter: values to show; omit to clear the filter" }),
+        ),
+      }),
+    ),
+  );
+  pi.registerTool(
+    tool(
+      "qrate_delete",
+      "ask to delete in qrate",
+      "Ask the archivist to delete rows or one column. qrate shows them your reason in a dialog and this waits for their answer: `deleted`, or a refusal `delete_declined` / `delete_timed_out`. Give exactly one of rows or column, and a plain one-sentence reason.",
+      "delete",
+      Type.Object({
+        revision: Type.Integer({ minimum: 0 }),
+        rows: Type.Optional(Type.Array(Type.Integer({ minimum: 0 }), { minItems: 1, maxItems: 1000 })),
+        column: Type.Optional(Type.String({ minLength: 1 })),
+        reason: Type.String({ minLength: 1, maxLength: 512, description: "Why, shown to the archivist" }),
+      }),
+    ),
+  );
 }
