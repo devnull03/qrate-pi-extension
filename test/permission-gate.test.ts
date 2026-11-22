@@ -5,11 +5,27 @@ vi.mock("../src/cli.js", () => ({ callQrate }));
 import { installPermissionGate } from "../src/permissions.js";
 
 type Gate = (event: { toolName: string; input: Record<string, unknown> }, ctx: { hasUI: boolean; ui: { confirm: ReturnType<typeof vi.fn> } }) => Promise<{ block: boolean; reason: string } | undefined>;
-function gate(): Gate {
+function gate(mode: "review" | "edit" | "connected" = "edit"): Gate {
   let handler: Gate | undefined;
-  installPermissionGate({ on: (_event: string, next: Gate) => { handler = next; } } as unknown as ExtensionAPI);
+  installPermissionGate(
+    { on: (event: string, next: Gate) => { if (event === "tool_call") handler = next; } } as unknown as ExtensionAPI,
+    { effectOf: (tool) => ({ qrate_add_rows: "edit", qrate_query: "read" } as Record<string, "edit" | "read">)[tool], mode: () => mode },
+  );
   return handler!;
 }
+
+it("lets a qrate tool through only when the mode allows its effect", async () => {
+  const review = gate("review");
+  expect(await review({ toolName: "qrate_query", input: {} }, context)).toBeUndefined();
+  expect(await review({ toolName: "qrate_add_rows", input: {} }, context)).toMatchObject({ block: true });
+  expect(await gate("edit")({ toolName: "qrate_add_rows", input: {} }, context)).toBeUndefined();
+  expect(callQrate).not.toHaveBeenCalled();
+});
+
+it("keeps the shell away from qrate's CLI", async () => {
+  const shell = await gate()({ toolName: "bash", input: { command: "qrate agent call delete < x.json" } }, context);
+  expect(shell).toMatchObject({ block: true });
+});
 const context = { hasUI: true, ui: { confirm: vi.fn() } };
 const read = { toolName: "read", input: { path: "/outside/notes.txt" } };
 beforeEach(() => { callQrate.mockReset(); context.ui.confirm.mockReset(); });

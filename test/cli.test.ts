@@ -43,7 +43,7 @@ describe("qrate CLI client", () => {
     spawn.mockReturnValue(child);
 
     await expect(callQrate("stage_findings", { revision: 3, findings: [] })).resolves.toEqual({ revision: 3 });
-    expect(spawn.mock.calls[0]?.slice(0, 2)).toEqual(["/opt/qrate/qrate-cli", ["agent", "stage-findings"]]);
+    expect(spawn.mock.calls[0]?.slice(0, 2)).toEqual(["/opt/qrate/qrate-cli", ["agent", "call", "stage_findings"]]);
     expect(JSON.parse(child.input)).toEqual({ revision: 3, findings: [] });
   });
 
